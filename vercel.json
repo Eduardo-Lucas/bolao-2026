@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm --prefix bolao-app install && npm --prefix bolao-app run build",
+  "outputDirectory": "bolao-app/dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
