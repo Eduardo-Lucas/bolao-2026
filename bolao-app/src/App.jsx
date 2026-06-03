@@ -110,6 +110,9 @@ export default function App() {
 
   const [newName, setNewName] = useState("");
   const [newPaid, setNewPaid] = useState(ENTRY_FEE);
+  const [newPin,  setNewPin]  = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState(false);
 
   function flash(text, isErr = false) {
     setMsg({ text, isErr });
@@ -147,12 +150,23 @@ export default function App() {
     setLocalResults(m);
   }, [results]);
 
+  function handlePinVerify() {
+    if (String(pinInput) === String(currentPlayer.pin)) {
+      setPinError(false);
+      setPinInput("");
+      setView("bet");
+    } else {
+      setPinError(true);
+    }
+  }
+
   async function handleRegister() {
     if (!newName.trim()) return;
+    if (!/^\d{4}$/.test(newPin)) { flash("⚠️ PIN deve ter exatamente 4 dígitos numéricos.", true); return; }
     setSaving(true);
     const { data, error } = await supabase
       .from("players")
-      .insert({ name: newName.trim(), paid: parseFloat(newPaid) || ENTRY_FEE })
+      .insert({ name: newName.trim(), paid: parseFloat(newPaid) || ENTRY_FEE, pin: newPin })
       .select()
       .single();
     setSaving(false);
@@ -163,6 +177,7 @@ export default function App() {
     setLocalBets({});
     setNewName("");
     setNewPaid(ENTRY_FEE);
+    setNewPin("");
     setView("bet");
     flash("✅ Cadastrado! Faça seus palpites.");
   }
@@ -299,8 +314,10 @@ export default function App() {
         <label style={S.lbl}>SEU NOME</label>
         <input style={{ ...S.inp, marginBottom:12 }} placeholder="Ex: João Silva" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleRegister()} />
         <label style={S.lbl}>VALOR PAGO (R$)</label>
-        <input style={S.inp} type="number" min="1" value={newPaid} onChange={e=>setNewPaid(e.target.value)} />
-        <div style={{ fontSize:12, color:"#aaa", marginTop:6 }}>Sugestão: R$ {ENTRY_FEE},00 por cota</div>
+        <input style={{ ...S.inp, marginBottom:12 }} type="number" min="1" value={newPaid} onChange={e=>setNewPaid(e.target.value)} />
+        <label style={S.lbl}>PIN (4 dígitos)</label>
+        <input style={S.inp} type="password" inputMode="numeric" maxLength={4} placeholder="••••" value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,"").slice(0,4))} onKeyDown={e=>e.key==="Enter"&&handleRegister()} />
+        <div style={{ fontSize:12, color:"#aaa", marginTop:6, marginBottom:0 }}>Guarde seu PIN — você vai precisar dele para editar palpites.</div>
         <button style={S.btn()} onClick={handleRegister} disabled={saving}>{saving?"Salvando…":"Cadastrar e fazer palpites →"}</button>
         <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("home")}>Cancelar</button>
       </div>
@@ -345,13 +362,35 @@ export default function App() {
           const m = {};
           (betsMap[p.id] || []).forEach(b => { m[b.game_id] = b; });
           setLocalBets(m);
-          setView("bet");
+          setPinInput("");
+          setPinError(false);
+          setView("pinVerify");
         }} style={{ ...S.card, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 20px" }}>
           <span style={{ fontWeight:700 }}>🇧🇷 {p.name}</span>
           <span style={{ color:"#aaa", fontSize:13 }}>Editar →</span>
         </div>
       ))}
       <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("home")}>← Voltar</button>
+    </div>
+  );
+
+  const renderPinVerify = () => (
+    <div style={S.wrap}>
+      <div style={S.card}>
+        <div style={S.sec}>🔐 Verificar identidade</div>
+        <div style={{ textAlign:"center", fontSize:20, fontWeight:800, marginBottom:20 }}>🇧🇷 {currentPlayer?.name}</div>
+        <label style={S.lbl}>SEU PIN (4 dígitos)</label>
+        <input
+          style={S.inp} type="password" inputMode="numeric" maxLength={4} placeholder="••••"
+          value={pinInput}
+          onChange={e => { setPinInput(e.target.value.replace(/\D/g,"").slice(0,4)); setPinError(false); }}
+          onKeyDown={e => e.key === "Enter" && handlePinVerify()}
+          autoFocus
+        />
+        {pinError && <div style={{ color:"#ff5252", fontSize:13, marginTop:8 }}>❌ PIN incorreto.</div>}
+        <button style={S.btn()} onClick={handlePinVerify}>Confirmar →</button>
+        <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("selectPlayer")}>← Voltar</button>
+      </div>
     </div>
   );
 
@@ -483,6 +522,7 @@ export default function App() {
       {view==="register"     && renderRegister()}
       {view==="bet"          && renderBet()}
       {view==="selectPlayer" && renderSelectPlayer()}
+      {view==="pinVerify"    && renderPinVerify()}
       {view==="ranking"      && renderRanking()}
       {view==="admin"        && renderAdmin()}
       {view==="adminLogin"   && renderAdminLogin()}
