@@ -111,8 +111,11 @@ export default function App() {
   const [newName, setNewName] = useState("");
   const [newPaid, setNewPaid] = useState(ENTRY_FEE);
   const [newPin,  setNewPin]  = useState("");
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState(false);
+  const [pinInput,  setPinInput]  = useState("");
+  const [pinError,  setPinError]  = useState(false);
+  const [pinAction, setPinAction] = useState("edit"); // "edit" | "change"
+  const [newPinA,   setNewPinA]   = useState("");
+  const [newPinB,   setNewPinB]   = useState("");
 
   function flash(text, isErr = false) {
     setMsg({ text, isErr });
@@ -154,10 +157,25 @@ export default function App() {
     if (String(pinInput) === String(currentPlayer.pin)) {
       setPinError(false);
       setPinInput("");
-      setView("bet");
+      setView(pinAction === "change" ? "changePin" : "bet");
     } else {
       setPinError(true);
     }
+  }
+
+  async function handleChangePin() {
+    if (!/^\d{4}$/.test(newPinA)) { flash("⚠️ PIN deve ter 4 dígitos numéricos.", true); return; }
+    if (newPinA !== newPinB) { flash("⚠️ Os PINs não coincidem.", true); return; }
+    setSaving(true);
+    const { error } = await supabase.from("players").update({ pin: newPinA }).eq("id", currentPlayer.id);
+    setSaving(false);
+    if (error) { flash("❌ " + error.message, true); return; }
+    setPlayers(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, pin: newPinA } : p));
+    setCurrentPlayer(prev => ({ ...prev, pin: newPinA }));
+    setNewPinA("");
+    setNewPinB("");
+    flash("✅ PIN alterado com sucesso!");
+    setView("home");
   }
 
   async function handleRegister() {
@@ -302,7 +320,10 @@ export default function App() {
       <button style={S.btn()} onClick={() => setView("register")}>➕ Participar do Bolão</button>
       <button style={S.btn("rgba(255,255,255,0.08)")} onClick={() => { fetchAll(); setView("ranking"); }}>🏆 Ver Ranking</button>
       {players.length > 0 && (
-        <button style={S.btn("rgba(255,255,255,0.05)")} onClick={() => setView("selectPlayer")}>✏️ Editar palpites</button>
+        <button style={S.btn("rgba(255,255,255,0.05)")} onClick={() => { setPinAction("edit"); setView("selectPlayer"); }}>✏️ Editar palpites</button>
+      )}
+      {players.length > 0 && (
+        <button style={S.btn("rgba(255,255,255,0.03)")} onClick={() => { setPinAction("change"); setView("selectPlayer"); }}>🔑 Alterar meu PIN</button>
       )}
     </div>
   );
@@ -371,6 +392,24 @@ export default function App() {
         </div>
       ))}
       <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("home")}>← Voltar</button>
+    </div>
+  );
+
+  const renderChangePin = () => (
+    <div style={S.wrap}>
+      <div style={S.card}>
+        <div style={S.sec}>🔑 Alterar PIN</div>
+        <div style={{ textAlign:"center", fontSize:18, fontWeight:800, marginBottom:20 }}>🇧🇷 {currentPlayer?.name}</div>
+        <label style={S.lbl}>NOVO PIN (4 dígitos)</label>
+        <input style={{ ...S.inp, marginBottom:12 }} type="password" inputMode="numeric" maxLength={4} placeholder="••••"
+          value={newPinA} onChange={e => setNewPinA(e.target.value.replace(/\D/g,"").slice(0,4))} autoFocus />
+        <label style={S.lbl}>CONFIRMAR NOVO PIN</label>
+        <input style={S.inp} type="password" inputMode="numeric" maxLength={4} placeholder="••••"
+          value={newPinB} onChange={e => setNewPinB(e.target.value.replace(/\D/g,"").slice(0,4))}
+          onKeyDown={e => e.key === "Enter" && handleChangePin()} />
+        <button style={S.btn()} onClick={handleChangePin} disabled={saving}>{saving ? "Salvando…" : "Salvar novo PIN"}</button>
+        <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("home")}>Cancelar</button>
+      </div>
     </div>
   );
 
@@ -523,6 +562,7 @@ export default function App() {
       {view==="bet"          && renderBet()}
       {view==="selectPlayer" && renderSelectPlayer()}
       {view==="pinVerify"    && renderPinVerify()}
+      {view==="changePin"    && renderChangePin()}
       {view==="ranking"      && renderRanking()}
       {view==="admin"        && renderAdmin()}
       {view==="adminLogin"   && renderAdminLogin()}
