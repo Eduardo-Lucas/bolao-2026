@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { SCORE_EXACT, SCORE_RESULT, calcPoints, totalPts, byGroup, medal, resultLabel } from "./utils.js";
 
 // ─── SUPABASE ─────────────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://jrxrnwkxrabswicwlsqv.supabase.co";
@@ -8,8 +9,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const ENTRY_FEE = 30;
-const SCORE_EXACT = 15;
-const SCORE_RESULT = 5;
 const ADMIN_PASSWORD = "hexa2026";
 
 const GAMES = [
@@ -22,37 +21,6 @@ const GAMES = [
 ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-function calcPoints(bet, result) {
-  if (!bet || !result) return null;
-  if (parseInt(bet.home_score) === parseInt(result.home_score) && parseInt(bet.away_score) === parseInt(result.away_score)) return SCORE_EXACT;
-  const bSign = Math.sign(parseInt(bet.home_score) - parseInt(bet.away_score));
-  const rSign = Math.sign(parseInt(result.home_score) - parseInt(result.away_score));
-  if (bSign === rSign) return SCORE_RESULT;
-  return 0;
-}
-
-function medal(i) { return ["🥇","🥈","🥉"][i] ?? `${i+1}º`; }
-
-function resultLabel(pts) {
-  if (pts === SCORE_EXACT)  return { label: "Placar exato",    color: "#00e676" };
-  if (pts === SCORE_RESULT) return { label: "Resultado certo", color: "#ffd600" };
-  return { label: "Errou", color: "#ff5252" };
-}
-
-function totalPts(bets, results) {
-  return GAMES.reduce((acc, g) => {
-    const b = bets?.find(b => b.game_id === g.id);
-    const r = results?.find(r => r.game_id === g.id);
-    return acc + (calcPoints(b, r) ?? 0);
-  }, 0);
-}
-
-function byGroup(games) {
-  return games.reduce((acc, g) => {
-    (acc[g.group] = acc[g.group] || []).push(g);
-    return acc;
-  }, {});
-}
 
 // ─── SCORE INPUT ──────────────────────────────────────────────────────────────
 function ScoreInput({ value, onChange }) {
@@ -235,7 +203,7 @@ export default function App() {
   }
 
   const ranked = [...players]
-    .map(p => ({ ...p, total: totalPts(betsMap[p.id], results) }))
+    .map(p => ({ ...p, total: totalPts(betsMap[p.id], results, GAMES) }))
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
   const totalPool = players.reduce((s, p) => s + (parseFloat(p.paid) || 0), 0);
@@ -319,7 +287,7 @@ export default function App() {
       <button style={S.btn()} onClick={() => setView("register")}>➕ Participar do Bolão</button>
       <button style={S.btn("rgba(255,255,255,0.08)")} onClick={() => { fetchAll(); setView("ranking"); }}>🏆 Ver Ranking</button>
       {players.length > 0 && (
-        <button style={S.btn("rgba(255,255,255,0.05)")} onClick={() => setView("selectPlayer")}>✏️ Editar meus palpites</button>
+        <button style={S.btn("rgba(255,255,255,0.05)")} onClick={() => setView("selectPlayer")}>✏️ Editar palpites</button>
       )}
     </div>
   );
@@ -363,14 +331,14 @@ export default function App() {
           </div>
         ))}
         <button style={S.btn()} onClick={handleSaveBets} disabled={saving}>{saving?"Salvando…":"💾 Salvar Palpites"}</button>
-        <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("home")}>← Voltar</button>
+        <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("selectPlayer")}>← Trocar jogador</button>
       </div>
     );
   };
 
   const renderSelectPlayer = () => (
     <div style={S.wrap}>
-      <div style={S.sec}>✏️ Quem vai editar palpites?</div>
+      <div style={S.sec}>✏️ Selecionar jogador</div>
       {players.map(p => (
         <div key={p.id} onClick={() => {
           setCurrentPlayer(p);
