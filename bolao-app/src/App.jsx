@@ -13,9 +13,12 @@ const SCORE_RESULT = 5;
 const ADMIN_PASSWORD = "hexa2026";
 
 const GAMES = [
-  { id: 1, home: "Brasil", away: "Marrocos", homeFlag: "🇧🇷", awayFlag: "🇲🇦", date: "13/06 (Sáb) • 19h00", venue: "MetLife Stadium, Nova York" },
-  { id: 2, home: "Brasil", away: "Haiti",    homeFlag: "🇧🇷", awayFlag: "🇭🇹", date: "19/06 (Sex) • 21h30", venue: "Lincoln Financial Field, Filadélfia" },
-  { id: 3, home: "Brasil", away: "Escócia",  homeFlag: "🇧🇷", awayFlag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", date: "24/06 (Qua) • 19h00", venue: "Hard Rock Stadium, Miami" },
+  // ── Grupo C ──────────────────────────────────────────────────────────────────
+  { id: 1, group: "C", home: "Brasil",   away: "Marrocos", homeFlag: "🇧🇷", awayFlag: "🇲🇦", date: "13/06 (Sáb) • 19h00", venue: "MetLife Stadium, Nova York" },
+  { id: 2, group: "C", home: "Brasil",   away: "Haiti",    homeFlag: "🇧🇷", awayFlag: "🇭🇹", date: "19/06 (Sex) • 21h30", venue: "Lincoln Financial Field, Filadélfia" },
+  { id: 3, group: "C", home: "Brasil",   away: "Escócia",  homeFlag: "🇧🇷", awayFlag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", date: "24/06 (Qua) • 19h00", venue: "Hard Rock Stadium, Miami" },
+  // Adicione jogos de outros grupos abaixo, ex:
+  // { id: 4, group: "A", home: "Time A", away: "Time B", homeFlag: "🏳️", awayFlag: "🏳️", date: "dd/MM • HHhMM", venue: "Estádio, Cidade" },
 ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -42,6 +45,13 @@ function totalPts(bets, results) {
     const r = results?.find(r => r.game_id === g.id);
     return acc + (calcPoints(b, r) ?? 0);
   }, 0);
+}
+
+function byGroup(games) {
+  return games.reduce((acc, g) => {
+    (acc[g.group] = acc[g.group] || []).push(g);
+    return acc;
+  }, {});
 }
 
 // ─── SCORE INPUT ──────────────────────────────────────────────────────────────
@@ -288,17 +298,22 @@ export default function App() {
       </div>
 
       <div style={S.card}>
-        <div style={S.sec}>⚽ Jogos — Grupo C</div>
-        {GAMES.map(g => {
-          const r = results.find(r => r.game_id === g.id);
-          return (
-            <div key={g.id} style={{ padding:"12px 16px", borderRadius:10, background:"rgba(255,255,255,0.04)", marginBottom:8, borderLeft:"3px solid #009c3b" }}>
-              <div style={{ fontWeight:700 }}>{g.homeFlag} {g.home} × {g.away} {g.awayFlag}</div>
-              <div style={{ fontSize:12, color:"#aaa", marginTop:2 }}>{g.date} • {g.venue}</div>
-              {r && <div style={{ fontSize:13, color:"#00e676", marginTop:4, fontWeight:700 }}>Resultado: {r.home_score} × {r.away_score}</div>}
-            </div>
-          );
-        })}
+        <div style={S.sec}>⚽ Jogos</div>
+        {Object.entries(byGroup(GAMES)).map(([group, games]) => (
+          <div key={group}>
+            <div style={{ fontSize:11, color:"#ffd600", letterSpacing:2, fontWeight:700, marginBottom:8, marginTop:8 }}>GRUPO {group}</div>
+            {games.map(g => {
+              const r = results.find(r => r.game_id === g.id);
+              return (
+                <div key={g.id} style={{ padding:"12px 16px", borderRadius:10, background:"rgba(255,255,255,0.04)", marginBottom:8, borderLeft:"3px solid #009c3b" }}>
+                  <div style={{ fontWeight:700 }}>{g.homeFlag} {g.home} × {g.away} {g.awayFlag}</div>
+                  <div style={{ fontSize:12, color:"#aaa", marginTop:2 }}>{g.date} • {g.venue}</div>
+                  {r && <div style={{ fontSize:13, color:"#00e676", marginTop:4, fontWeight:700 }}>Resultado: {r.home_score} × {r.away_score}</div>}
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <button style={S.btn()} onClick={() => setView("register")}>➕ Participar do Bolão</button>
@@ -332,16 +347,21 @@ export default function App() {
           <div style={{ fontSize:20, fontWeight:800 }}>🇧🇷 Palpites de {currentPlayer.name}</div>
           <div style={{ fontSize:13, color:"#aaa", marginTop:4 }}>Digite o placar que você acredita</div>
         </div>
-        {GAMES.map(g => {
-          const r = results.find(r => r.game_id === g.id);
-          return (
-            <GameCard key={g.id} game={g}
-              bet={localBets[g.id] || { home_score:0, away_score:0 }}
-              onBetChange={v => setLocalBets(prev => ({ ...prev, [g.id]: v }))}
-              result={r} onResultChange={()=>{}} isAdmin={false}
-            />
-          );
-        })}
+        {Object.entries(byGroup(GAMES)).map(([group, games]) => (
+          <div key={group}>
+            <div style={{ fontSize:11, color:"#ffd600", letterSpacing:2, fontWeight:700, marginBottom:10, marginTop:4 }}>GRUPO {group}</div>
+            {games.map(g => {
+              const r = results.find(r => r.game_id === g.id);
+              return (
+                <GameCard key={g.id} game={g}
+                  bet={localBets[g.id] || { home_score:0, away_score:0 }}
+                  onBetChange={v => setLocalBets(prev => ({ ...prev, [g.id]: v }))}
+                  result={r} onResultChange={()=>{}} isAdmin={false}
+                />
+              );
+            })}
+          </div>
+        ))}
         <button style={S.btn()} onClick={handleSaveBets} disabled={saving}>{saving?"Salvando…":"💾 Salvar Palpites"}</button>
         <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("home")}>← Voltar</button>
       </div>
@@ -416,20 +436,25 @@ export default function App() {
       <div style={S.sec}>⚡ Painel Admin</div>
       <div style={S.card}>
         <div style={{ fontWeight:700, marginBottom:16, color:"#ffd600" }}>📥 Inserir Resultados Reais</div>
-        {GAMES.map(g => {
-          const r = localResults[g.id];
-          return (
-            <GameCard key={g.id} game={g}
-              bet={{ home_score:0, away_score:0 }} onBetChange={()=>{}}
-              result={r}
-              onResultChange={async val => {
-                setLocalResults(prev => val===null ? (({[g.id]:_,...rest})=>rest)(prev) : { ...prev, [g.id]: { game_id:g.id, ...val } });
-                await handleSaveResult(g.id, val);
-              }}
-              isAdmin={true}
-            />
-          );
-        })}
+        {Object.entries(byGroup(GAMES)).map(([group, games]) => (
+          <div key={group}>
+            <div style={{ fontSize:11, color:"#ffd600", letterSpacing:2, fontWeight:700, marginBottom:10, marginTop:8 }}>GRUPO {group}</div>
+            {games.map(g => {
+              const r = localResults[g.id];
+              return (
+                <GameCard key={g.id} game={g}
+                  bet={{ home_score:0, away_score:0 }} onBetChange={()=>{}}
+                  result={r}
+                  onResultChange={async val => {
+                    setLocalResults(prev => val===null ? (({[g.id]:_,...rest})=>rest)(prev) : { ...prev, [g.id]: { game_id:g.id, ...val } });
+                    await handleSaveResult(g.id, val);
+                  }}
+                  isAdmin={true}
+                />
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <div style={S.card}>
@@ -476,7 +501,7 @@ export default function App() {
         <div style={{ position:"relative" }}>
           <div style={{ fontSize:36, marginBottom:4 }}>🇧🇷⚽🏆</div>
           <h1 style={{ fontSize:28, fontWeight:900, letterSpacing:-1, margin:0, textShadow:"0 2px 8px rgba(0,0,0,0.5)" }}>Bolão Copa 2026</h1>
-          <div style={{ fontSize:13, color:"rgba(255,255,255,0.8)", marginTop:4 }}>Grupo C do Brasil • Dados em tempo real 🟢</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.8)", marginTop:4 }}>Copa do Mundo 2026 • Dados em tempo real 🟢</div>
         </div>
       </div>
 
