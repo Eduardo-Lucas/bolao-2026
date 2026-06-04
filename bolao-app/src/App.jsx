@@ -185,9 +185,17 @@ export default function App() {
     if (!/^\d{4}$/.test(newPinA)) { flash("⚠️ PIN deve ter 4 dígitos numéricos.", true); return; }
     if (newPinA !== newPinB) { flash("⚠️ Os PINs não coincidem.", true); return; }
     setSaving(true);
-    const { error } = await supabase.from("players").update({ pin: newPinA }).eq("id", currentPlayer.id);
+    const { data, error } = await supabase
+      .from("players")
+      .update({ pin: newPinA })
+      .eq("id", currentPlayer.id)
+      .select("id")
+      .single();
     setSaving(false);
-    if (error) { flash("❌ " + error.message, true); return; }
+    if (error || !data) {
+      flash("❌ Não foi possível salvar o PIN. Execute no Supabase: ALTER TABLE players DISABLE ROW LEVEL SECURITY;", true);
+      return;
+    }
     setPlayers(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, pin: newPinA } : p));
     setCurrentPlayer(prev => ({ ...prev, pin: newPinA }));
     setNewPinA("");
