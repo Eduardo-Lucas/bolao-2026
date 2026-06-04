@@ -73,6 +73,14 @@ function GameCard({ game, bet, onBetChange, result, onResultChange, isAdmin, dis
   const bh  = bet?.home_score ?? 0;
   const ba  = bet?.away_score ?? 0;
 
+  // Admin: estado local para os inputs de resultado (não dispara save a cada tecla)
+  const [adminHome, setAdminHome] = useState(result?.home_score ?? 0);
+  const [adminAway, setAdminAway] = useState(result?.away_score ?? 0);
+  useEffect(() => {
+    setAdminHome(result?.home_score ?? 0);
+    setAdminAway(result?.away_score ?? 0);
+  }, [result]);
+
   return (
     <div style={{
       background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
@@ -101,10 +109,14 @@ function GameCard({ game, bet, onBetChange, result, onResultChange, isAdmin, dis
       {isAdmin && (
         <div style={{ marginTop:14, borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:12 }}>
           <div style={{ fontSize:11, color:"#ffd600", marginBottom:8, letterSpacing:1 }}>⚡ RESULTADO REAL</div>
-          <div style={{ display:"flex", alignItems:"center", gap:8, justifyContent:"center" }}>
-            <ScoreInput value={result?.home_score ?? 0} onChange={v => onResultChange({ home_score: v, away_score: result?.away_score ?? 0 })} />
+          <div style={{ display:"flex", alignItems:"center", gap:8, justifyContent:"center", flexWrap:"wrap" }}>
+            <ScoreInput value={adminHome} onChange={setAdminHome} />
             <span style={{ color:"#555" }}>×</span>
-            <ScoreInput value={result?.away_score ?? 0} onChange={v => onResultChange({ home_score: result?.home_score ?? 0, away_score: v })} />
+            <ScoreInput value={adminAway} onChange={setAdminAway} />
+            <button onClick={() => onResultChange({ home_score: adminHome, away_score: adminAway })} style={{
+              background:"rgba(0,156,59,0.2)", border:"1px solid #009c3b",
+              borderRadius:6, color:"#00e676", padding:"4px 10px", cursor:"pointer", fontSize:11,
+            }}>{result ? "Atualizar" : "Salvar"}</button>
             {result && (
               <button onClick={() => onResultChange(null)} style={{
                 background:"rgba(255,82,82,0.15)", border:"1px solid #ff5252",
@@ -547,10 +559,7 @@ export default function App() {
                 <GameCard key={g.id} game={g}
                   bet={{ home_score:0, away_score:0 }} onBetChange={()=>{}}
                   result={r}
-                  onResultChange={async val => {
-                    setLocalResults(prev => val===null ? (({[g.id]:_,...rest})=>rest)(prev) : { ...prev, [g.id]: { game_id:g.id, ...val } });
-                    await handleSaveResult(g.id, val);
-                  }}
+                  onResultChange={val => handleSaveResult(g.id, val)}
                   isAdmin={true}
                 />
               );
