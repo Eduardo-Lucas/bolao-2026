@@ -3,13 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 import { SCORE_EXACT, SCORE_RESULT, calcPoints, totalPts, byGroup, medal, resultLabel } from "./utils.js";
 
 // ─── SUPABASE ─────────────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://jrxrnwkxrabswicwlsqv.supabase.co";
-const SUPABASE_KEY = "sb_publishable_1AEAwrQdLvHT75nPfuk5OA_FySbqTle";
+const SUPABASE_URL  = "https://jrxrnwkxrabswicwlsqv.supabase.co";
+const SUPABASE_KEY  = "sb_publishable_1AEAwrQdLvHT75nPfuk5OA_FySbqTle";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const ENTRY_FEE = 30;
-const ADMIN_PASSWORD = "hexa2026";
 
 const GAMES = [
   // ── Grupo C ──────────────────────────────────────────────────────────────────
@@ -38,7 +37,18 @@ const GAMES = [
   { id: 18, group: "K", home: "Colômbia",  away: "Portugal",        homeFlag: "🇨🇴", awayFlag: "🇵🇹", date: "27/06 (Sáb) • 20h30", venue: "Hard Rock Stadium, Miami" },
 ];
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// ─── EDGE FUNCTION HELPER ─────────────────────────────────────────────────────
+async function callFn(name, body) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (!error) return { ok: true, json: async () => data };
+  // FunctionsHttpError carrega o Response original em error.context
+  try {
+    const errBody = await error.context?.json?.();
+    return { ok: false, json: async () => errBody ?? { error: error.message } };
+  } catch {
+    return { ok: false, json: async () => ({ error: error.message }) };
+  }
+}
 
 // ─── SCORE INPUT ──────────────────────────────────────────────────────────────
 function ScoreInput({ value, onChange }) {
@@ -129,11 +139,12 @@ export default function App() {
   const [newName, setNewName] = useState("");
   const [newPaid, setNewPaid] = useState(ENTRY_FEE);
   const [newPin,  setNewPin]  = useState("");
-  const [pinInput,  setPinInput]  = useState("");
-  const [pinError,  setPinError]  = useState(false);
-  const [pinAction, setPinAction] = useState("edit"); // "edit" | "change"
-  const [newPinA,   setNewPinA]   = useState("");
-  const [newPinB,   setNewPinB]   = useState("");
+  const [pinInput,    setPinInput]    = useState("");
+  const [pinError,    setPinError]    = useState(false);
+  const [pinAction,   setPinAction]   = useState("edit"); // "edit" | "change"
+  const [verifiedPin, setVerifiedPin] = useState("");     // PIN verificado pelo servidor
+  const [newPinA,     setNewPinA]     = useState("");
+  const [newPinB,     setNewPinB]     = useState("");
 
   function flash(text, isErr = false) {
     setMsg({ text, isErr });
@@ -146,7 +157,8 @@ export default function App() {
     try {
       const [{ data: pl, error: e1 }, { data: bt, error: e2 }, { data: rs, error: e3 }] =
         await Promise.all([
-          supabase.from("players").select("*").order("registered_at"),
+          // players_public é uma view sem a coluna pin
+          supabase.from("players_public").select("id,name,paid,registered_at").order("registered_at"),
           supabase.from("bets").select("*"),
           supabase.from("results").select("*"),
         ]);
@@ -171,33 +183,30 @@ export default function App() {
     setLocalResults(m);
   }, [results]);
 
-  function handlePinVerify() {
-    if (String(pinInput) === String(currentPlayer.pin)) {
-      setPinError(false);
-      setPinInput("");
-      setView(pinAction === "change" ? "changePin" : "bet");
-    } else {
-      setPinError(true);
-    }
+  async function handlePinVerify() {
+    setSaving(true);
+    const res = await callFn("verify-pin", { player_id: currentPlayer.id, pin: pinInput });
+    setSaving(false);
+    if (!res.ok) { setPinError(true); return; }
+    setPinError(false);
+    setVerifiedPin(pinInput);
+    setPinInput("");
+    setView(pinAction === "change" ? "changePin" : "bet");
   }
 
   async function handleChangePin() {
     if (!/^\d{4}$/.test(newPinA)) { flash("⚠️ PIN deve ter 4 dígitos numéricos.", true); return; }
     if (newPinA !== newPinB) { flash("⚠️ Os PINs não coincidem.", true); return; }
     setSaving(true);
-    const { data, error } = await supabase
-      .from("players")
-      .update({ pin: newPinA })
-      .eq("id", currentPlayer.id)
-      .select("id")
-      .single();
+    const res = await callFn("update-pin", {
+      player_id:   currentPlayer.id,
+      current_pin: verifiedPin,
+      new_pin:     newPinA,
+    });
+    const data = await res.json();
     setSaving(false);
-    if (error || !data) {
-      flash("❌ Não foi possível salvar o PIN. Execute no Supabase: ALTER TABLE players DISABLE ROW LEVEL SECURITY;", true);
-      return;
-    }
-    setPlayers(prev => prev.map(p => p.id === currentPlayer.id ? { ...p, pin: newPinA } : p));
-    setCurrentPlayer(prev => ({ ...prev, pin: newPinA }));
+    if (!res.ok) { flash("❌ " + data.error, true); return; }
+    setVerifiedPin("");
     setNewPinA("");
     setNewPinB("");
     flash("✅ PIN alterado com sucesso!");
@@ -211,7 +220,7 @@ export default function App() {
     const { data, error } = await supabase
       .from("players")
       .insert({ name: newName.trim(), paid: parseFloat(newPaid) || ENTRY_FEE, pin: newPin })
-      .select()
+      .select("id,name,paid,registered_at")
       .single();
     setSaving(false);
     if (error) { flash("⚠️ " + (error.message.includes("unique") ? "Nome já cadastrado." : error.message), true); return; }
@@ -244,21 +253,42 @@ export default function App() {
 
   async function handleSaveResult(gameId, result) {
     if (result === null) {
-      await supabase.from("results").delete().eq("game_id", gameId);
+      const res  = await callFn("admin-action", { action: "delete-result", admin_password: adminPass, game_id: gameId });
+      const data = await res.json();
+      if (!res.ok) { flash("❌ " + data.error, true); return; }
       setResults(prev => prev.filter(r => r.game_id !== gameId));
       return;
     }
+    const res  = await callFn("admin-action", {
+      action:        "save-result",
+      admin_password: adminPass,
+      game_id:        gameId,
+      home_score:     parseInt(result.home_score),
+      away_score:     parseInt(result.away_score),
+    });
+    const data = await res.json();
+    if (!res.ok) { flash("❌ " + data.error, true); return; }
     const row = { game_id: gameId, home_score: parseInt(result.home_score), away_score: parseInt(result.away_score) };
-    const { error } = await supabase.from("results").upsert(row, { onConflict: "game_id" });
-    if (error) { flash("❌ " + error.message, true); return; }
-    setResults(prev => { const f = prev.filter(r => r.game_id !== gameId); return [...f, row]; });
+    setResults(prev => [...prev.filter(r => r.game_id !== gameId), row]);
     flash("✅ Resultado salvo!");
   }
 
   async function handleDeletePlayer(id) {
-    await supabase.from("players").delete().eq("id", id);
+    const res  = await callFn("admin-action", { action: "delete-player", admin_password: adminPass, player_id: id });
+    const data = await res.json();
+    if (!res.ok) { flash("❌ " + data.error, true); return; }
     setPlayers(prev => prev.filter(p => p.id !== id));
     setBetsMap(prev => { const n = { ...prev }; delete n[id]; return n; });
+  }
+
+  async function handleAdminLogin() {
+    setSaving(true);
+    const res = await callFn("admin-action", { action: "verify", admin_password: adminPass });
+    setSaving(false);
+    if (!res.ok) { setAdminErr(true); return; }
+    setAdminMode(true);
+    setAdminErr(false);
+    setView("admin");
   }
 
   const ranked = [...players]
@@ -453,7 +483,7 @@ export default function App() {
           autoFocus
         />
         {pinError && <div style={{ color:"#ff5252", fontSize:13, marginTop:8 }}>❌ PIN incorreto.</div>}
-        <button style={S.btn()} onClick={handlePinVerify}>Confirmar →</button>
+        <button style={S.btn()} onClick={handlePinVerify} disabled={saving}>{saving ? "Verificando…" : "Confirmar →"}</button>
         <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("selectPlayer")}>← Voltar</button>
       </div>
     </div>
@@ -545,7 +575,7 @@ export default function App() {
         ))}
       </div>
 
-      <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => { setAdminMode(false); setView("home"); }}>← Sair do Admin</button>
+      <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => { setAdminMode(false); setAdminPass(""); setView("home"); }}>← Sair do Admin</button>
     </div>
   );
 
@@ -555,13 +585,13 @@ export default function App() {
         <div style={S.sec}>🔐 Acesso Admin</div>
         <label style={S.lbl}>SENHA</label>
         <input style={S.inp} type="password" placeholder="Digite a senha…" value={adminPass}
-          onChange={e => setAdminPass(e.target.value)}
-          onKeyDown={e => { if (e.key==="Enter") { if (adminPass===ADMIN_PASSWORD) { setAdminMode(true); setAdminErr(false); setView("admin"); } else setAdminErr(true); }}}
+          onChange={e => { setAdminPass(e.target.value); setAdminErr(false); }}
+          onKeyDown={e => e.key === "Enter" && handleAdminLogin()}
+          autoFocus
         />
         {adminErr && <div style={{ color:"#ff5252", fontSize:13, marginTop:8 }}>❌ Senha incorreta.</div>}
-        <button style={S.btn()} onClick={() => { if (adminPass===ADMIN_PASSWORD) { setAdminMode(true); setAdminErr(false); setView("admin"); } else setAdminErr(true); }}>Entrar</button>
+        <button style={S.btn()} onClick={handleAdminLogin} disabled={saving}>{saving ? "Verificando…" : "Entrar"}</button>
         <button style={{ ...S.btn("transparent"), border:"1px solid rgba(255,255,255,0.1)" }} onClick={() => setView("home")}>Cancelar</button>
-        <div style={{ fontSize:11, color:"#444", marginTop:12, textAlign:"center" }}>Senha padrão: hexa2026</div>
       </div>
     </div>
   );
