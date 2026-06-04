@@ -37,8 +37,10 @@ CREATE POLICY "players_anon_insert"
 -- UPDATE e DELETE: apenas service_role via Edge Functions
 -- (sem policy para anon → bloqueado por padrão pelo RLS)
 
--- Ocultar coluna pin do papel anon — impede leitura direta via API
-REVOKE SELECT (pin) ON players FROM anon;
+-- Ocultar coluna pin: revogar SELECT total e re-conceder só as colunas seguras
+-- (REVOKE de coluna isolada não funciona quando o grant foi feito no nível da tabela)
+REVOKE SELECT ON players FROM anon;
+GRANT  SELECT (id, name, paid, registered_at) ON players TO anon;
 
 -- ── 5. Tabela: bets ────────────────────────────────────────────────────────────
 -- anon pode ler todos os palpites (ranking)
