@@ -13,11 +13,29 @@ const ADMIN_PASSWORD = "hexa2026";
 
 const GAMES = [
   // ── Grupo C ──────────────────────────────────────────────────────────────────
-  { id: 1, group: "C", home: "Brasil",   away: "Marrocos", homeFlag: "🇧🇷", awayFlag: "🇲🇦", date: "13/06 (Sáb) • 19h00", venue: "MetLife Stadium, Nova York" },
-  { id: 2, group: "C", home: "Brasil",   away: "Haiti",    homeFlag: "🇧🇷", awayFlag: "🇭🇹", date: "19/06 (Sex) • 21h30", venue: "Lincoln Financial Field, Filadélfia" },
-  { id: 3, group: "C", home: "Brasil",   away: "Escócia",  homeFlag: "🇧🇷", awayFlag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", date: "24/06 (Qua) • 19h00", venue: "Hard Rock Stadium, Miami" },
-  // Adicione jogos de outros grupos abaixo, ex:
-  // { id: 4, group: "A", home: "Time A", away: "Time B", homeFlag: "🏳️", awayFlag: "🏳️", date: "dd/MM • HHhMM", venue: "Estádio, Cidade" },
+  { id:  1, group: "C", home: "Brasil",    away: "Marrocos",        homeFlag: "🇧🇷", awayFlag: "🇲🇦", date: "13/06 (Sáb) • 19h00", venue: "MetLife Stadium, Nova York" },
+  { id:  2, group: "C", home: "Brasil",    away: "Haiti",           homeFlag: "🇧🇷", awayFlag: "🇭🇹", date: "19/06 (Sex) • 21h30", venue: "Lincoln Financial Field, Filadélfia" },
+  { id:  3, group: "C", home: "Brasil",    away: "Escócia",         homeFlag: "🇧🇷", awayFlag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", date: "24/06 (Qua) • 19h00", venue: "Hard Rock Stadium, Miami" },
+  // ── Grupo E ──────────────────────────────────────────────────────────────────
+  { id:  4, group: "E", home: "Alemanha",  away: "Curaçao",         homeFlag: "🇩🇪", awayFlag: "🇨🇼", date: "14/06 (Dom) • 14h00", venue: "NRG Stadium, Houston" },
+  { id:  5, group: "E", home: "Alemanha",  away: "Costa do Marfim", homeFlag: "🇩🇪", awayFlag: "🇨🇮", date: "20/06 (Sáb) • 17h00", venue: "BMO Field, Toronto" },
+  { id:  6, group: "E", home: "Equador",   away: "Alemanha",        homeFlag: "🇪🇨", awayFlag: "🇩🇪", date: "25/06 (Qui) • 17h00", venue: "MetLife Stadium, Nova Jersey" },
+  // ── Grupo H ──────────────────────────────────────────────────────────────────
+  { id:  7, group: "H", home: "Espanha",   away: "Cabo Verde",      homeFlag: "🇪🇸", awayFlag: "🇨🇻", date: "15/06 (Seg) • 13h00", venue: "Mercedes-Benz Stadium, Atlanta" },
+  { id:  8, group: "H", home: "Espanha",   away: "Arábia Saudita",  homeFlag: "🇪🇸", awayFlag: "🇸🇦", date: "21/06 (Dom) • 13h00", venue: "Mercedes-Benz Stadium, Atlanta" },
+  { id:  9, group: "H", home: "Uruguai",   away: "Espanha",         homeFlag: "🇺🇾", awayFlag: "🇪🇸", date: "26/06 (Sex) • 21h00", venue: "Estádio Akron, Guadalajara" },
+  // ── Grupo I ──────────────────────────────────────────────────────────────────
+  { id: 10, group: "I", home: "França",    away: "Senegal",         homeFlag: "🇫🇷", awayFlag: "🇸🇳", date: "16/06 (Ter) • 16h00", venue: "MetLife Stadium, Nova Jersey" },
+  { id: 11, group: "I", home: "França",    away: "Iraque",          homeFlag: "🇫🇷", awayFlag: "🇮🇶", date: "22/06 (Seg) • 18h00", venue: "Lincoln Financial Field, Filadélfia" },
+  { id: 12, group: "I", home: "Noruega",   away: "França",          homeFlag: "🇳🇴", awayFlag: "🇫🇷", date: "26/06 (Sex) • 16h00", venue: "Gillette Stadium, Foxborough" },
+  // ── Grupo J ──────────────────────────────────────────────────────────────────
+  { id: 13, group: "J", home: "Argentina", away: "Argélia",         homeFlag: "🇦🇷", awayFlag: "🇩🇿", date: "16/06 (Ter) • 22h00", venue: "Arrowhead Stadium, Kansas City" },
+  { id: 14, group: "J", home: "Argentina", away: "Áustria",         homeFlag: "🇦🇷", awayFlag: "🇦🇹", date: "22/06 (Seg) • 14h00", venue: "AT&T Stadium, Arlington" },
+  { id: 15, group: "J", home: "Jordânia",  away: "Argentina",       homeFlag: "🇯🇴", awayFlag: "🇦🇷", date: "27/06 (Sáb) • 23h00", venue: "AT&T Stadium, Arlington" },
+  // ── Grupo K ──────────────────────────────────────────────────────────────────
+  { id: 16, group: "K", home: "Portugal",  away: "RD Congo",        homeFlag: "🇵🇹", awayFlag: "🇨🇩", date: "17/06 (Qua) • 14h00", venue: "NRG Stadium, Houston" },
+  { id: 17, group: "K", home: "Portugal",  away: "Uzbequistão",     homeFlag: "🇵🇹", awayFlag: "🇺🇿", date: "23/06 (Ter) • 14h00", venue: "NRG Stadium, Houston" },
+  { id: 18, group: "K", home: "Colômbia",  away: "Portugal",        homeFlag: "🇨🇴", awayFlag: "🇵🇹", date: "27/06 (Sáb) • 20h30", venue: "Hard Rock Stadium, Miami" },
 ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
